@@ -52,11 +52,8 @@ def get_custom_date(text, default_date):
 
 
 # converts date without timezone to Bangkok timezone
-def convert_date(date):
-    naive_date = date
-    utc_date = pytz.utc.localize(naive_date)
-    bangkok_date = utc_date.astimezone(pytz.timezone('Asia/Bangkok'))
-    return bangkok_date
+def convert_date(d):
+    return d.astimezone(pytz.timezone('Asia/Bangkok'))
 
 
 # if chat type is supergroup, try to add message id to history file. Any other chat type - answer with a default text
