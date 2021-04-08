@@ -19,6 +19,9 @@ except FileExistsError:
     print('Directory already exists')
 
 
+class Stop(Exception):
+    pass
+
 def save_message_id(file, date, message_id, rewrite=False):
     """
     add (replace - if date already exists) message id to history file
@@ -57,23 +60,18 @@ def convert_date(d):
     return d.astimezone(pytz.timezone('Asia/Bangkok'))
 
 
+def check_chat(update: Update, context: CallbackContext):
+    chat = update.effective_chat  # type:Chat
+    bot = context.bot  # type:Bot
+    if chat.type != Chat.SUPERGROUP:
+        bot.send_message(chat.id, 'Добавь меня в групповой чат, я буду записывать и потом напоминать о том, '
+                                  'что обсуждалось в чате некоторое время назад.')
+        raise Stop
+
+
 # if chat type is supergroup, try to add message id to history file. Any other chat type - answer with a default text
 def answer(update: Update, context: CallbackContext):
-    effective_chat = update.effective_chat  # type:Chat
-    bot = context.bot  # type:Bot
-    if effective_chat.type == 'group':
-        bot.send_message(
-            chat_id=update.effective_chat.id,
-            text='Добавь меня в групповой чат, я буду записывать и потом напоминать о том, '
-                 'что обсуждалось в чате некоторое время назад.',
-        )
-        return
-    if effective_chat.type != 'supergroup':
-        bot.send_message(
-            chat_id=update.effective_chat.id,
-            text='Добавь меня в групповой чат, я буду записывать и потом напоминать о том, '
-                 'что обсуждалось в чате некоторое время назад.')
-        return
+    check_chat(update, context)
     message = update.message  # type:Message
     with open('data/{}_history.txt'.format(message.chat_id), 'a+') as history:
         text = message.text or message.caption
@@ -83,30 +81,31 @@ def answer(update: Update, context: CallbackContext):
 
 # for command 'save': add (replace - if date already exists) message id to history file
 def save_command(update: Update, context: CallbackContext):
-    effective_chat = update.effective_chat  # type:Chat
-    bot = context.bot  # type:Bot
+    check_chat(update, context)
+    message = update.message  # type:Message
     reply_to_message = update.message.reply_to_message  # type:Message
     if not reply_to_message:
-        bot.send_message(chat_id=effective_chat.id, text='Сделай реплай на сообщение')
+        message.reply_text('Сделай реплай на сообщение')
         return
     with open('data/{}_history.txt'.format(update.message.chat_id), 'a+') as history:
         message_id = str(reply_to_message.message_id)
         text = reply_to_message.text or reply_to_message.caption
         custom_date = get_custom_date(text, convert_date(reply_to_message.date))
-        result = save_message_id(history, custom_date, message_id, rewrite=True)
-        bot.send_message(chat_id=effective_chat.id, text=result)
+        result_text = save_message_id(history, custom_date, message_id, rewrite=True)
+        message.reply_text(result_text)
 
 
 def error(update: Update, context: CallbackContext):
-    effective_chat = update.effective_chat  # type:Chat
-    bot = context.bot  # type:Bot
-    bot.send_message(chat_id=effective_chat.id, text='Произошла ошибка')
+    if isinstance(context.error, Stop):
+        # остановка
+        return
+    message = update.effective_message  # type:Message
+    message.reply_text('Произошла ошибка')
 
 
 dispatcher.add_handler(CommandHandler('start', answer))
 dispatcher.add_handler(CommandHandler('save', save_command))
-dispatcher.add_handler(MessageHandler(Filters.command, answer))
-dispatcher.add_handler(MessageHandler(Filters.text, answer))
+dispatcher.add_handler(MessageHandler(Filters.update.message & (Filters.text | Filters.caption), answer))
 dispatcher.add_error_handler(error)
 
-updater.start_polling()
+updater.start_polling(allowed_updates=['message'])
