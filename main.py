@@ -3,13 +3,14 @@ import os
 from datetime import datetime
 
 import pytz
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
+from telegram import Bot, Chat, Message, Update
+from telegram.ext import CallbackContext, CommandHandler, Dispatcher, Filters, MessageHandler, Updater
 
 import settings
 
 updater = Updater(token=settings.TELEGRAM_BOT_API, use_context=True)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-dispatcher = updater.dispatcher
+dispatcher = updater.dispatcher  # type:Dispatcher
 
 # create a folder to store data
 try:
@@ -57,46 +58,55 @@ def convert_date(d):
 
 
 # if chat type is supergroup, try to add message id to history file. Any other chat type - answer with a default text
-def answer(update, context):
-    effective_chat = update.effective_chat
+def answer(update: Update, context: CallbackContext):
+    effective_chat = update.effective_chat  # type:Chat
+    bot = context.bot  # type:Bot
     if effective_chat.type == 'group':
-        context.bot.send_message(
+        bot.send_message(
             chat_id=update.effective_chat.id,
             text='Добавь меня в групповой чат, я буду записывать и потом напоминать о том, '
                  'что обсуждалось в чате некоторое время назад.',
         )
         return
     if effective_chat.type != 'supergroup':
-        context.bot.send_message(
+        bot.send_message(
             chat_id=update.effective_chat.id,
             text='Добавь меня в групповой чат, я буду записывать и потом напоминать о том, '
                  'что обсуждалось в чате некоторое время назад.')
         return
-    message = update.message
+    message = update.message  # type:Message
     with open('data/{}_history.txt'.format(message.chat_id), 'a+') as history:
-        custom_date = get_custom_date(message.text or message.caption, convert_date(message.date))
+        text = message.text or message.caption
+        custom_date = get_custom_date(text, convert_date(message.date))
         save_message_id(history, custom_date, message.message_id)
 
 
 # for command 'save': add (replace - if date already exists) message id to history file
-def save_command(update, context):
-    effective_chat = update.effective_chat
-    bot = context.bot
-    reply_to_message = update.message.reply_to_message
+def save_command(update: Update, context: CallbackContext):
+    effective_chat = update.effective_chat  # type:Chat
+    bot = context.bot  # type:Bot
+    reply_to_message = update.message.reply_to_message  # type:Message
     if not reply_to_message:
         bot.send_message(chat_id=effective_chat.id, text='Сделай реплай на сообщение')
         return
     with open('data/{}_history.txt'.format(update.message.chat_id), 'a+') as history:
         message_id = str(reply_to_message.message_id)
-        custom_date = get_custom_date(reply_to_message.text or reply_to_message.caption,
-                                      convert_date(reply_to_message.date))
+        text = reply_to_message.text or reply_to_message.caption
+        custom_date = get_custom_date(text, convert_date(reply_to_message.date))
         result = save_message_id(history, custom_date, message_id, rewrite=True)
         bot.send_message(chat_id=effective_chat.id, text=result)
+
+
+def error(update: Update, context: CallbackContext):
+    effective_chat = update.effective_chat  # type:Chat
+    bot = context.bot  # type:Bot
+    bot.send_message(chat_id=effective_chat.id, text='Произошла ошибка')
 
 
 dispatcher.add_handler(CommandHandler('start', answer))
 dispatcher.add_handler(CommandHandler('save', save_command))
 dispatcher.add_handler(MessageHandler(Filters.command, answer))
 dispatcher.add_handler(MessageHandler(Filters.text, answer))
+dispatcher.add_error_handler(error)
 
 updater.start_polling()
