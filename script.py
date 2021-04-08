@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pytz
 from telegram import Bot
-from telegram.error import (BadRequest)
+from telegram.error import BadRequest
 
 import settings
 
@@ -29,7 +29,7 @@ def get_message_id(file, date):
     file.seek(0)
     dictionary = {}
     for line in file:
-        pair = line.split(":")
+        pair = line.split(':')
         dictionary[pair[0]] = pair[1]
     try:
         return dictionary[date_key]
@@ -37,9 +37,8 @@ def get_message_id(file, date):
         return False
 
 
-# pluralize
 def plural_years(n):
-    years = ["год", "года", "лет"]
+    years = ['год', 'года', 'лет']
     if n % 10 == 1:
         p = 0
     elif 1 < n % 10 < 5:
@@ -64,12 +63,15 @@ def plural_days(n):
 
 # search message id of certain age and reply
 def remind(chat_id, age):
-    history = open("data/%s_history.txt" % chat_id, "a+")
+    history = open('data/{}_history.txt'.format(chat_id), 'a+')
     remind_date = convert_date(datetime.utcnow()) - timedelta(age)
     message_id = get_message_id(history, remind_date)
     if message_id:
-        sent = bot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
-                                text="{} назад".format(plural_days(age)))
+        sent = bot.send_message(
+            chat_id=chat_id,
+            reply_to_message_id=message_id,
+            text='{} назад'.format(plural_days(age)),
+        )
         return str(sent.message_id)
     else:
         return False
@@ -77,22 +79,25 @@ def remind(chat_id, age):
 
 # checks messages year by year
 def remind_yearly(chat_id, date):
-    history = open("data/%s_history.txt" % chat_id, "a+")
+    history = open('data/{}_history.txt'.format(chat_id), 'a+')
     date_key = date.strftime('%m-%d')
     year_now = date.strftime('%Y')
     history.seek(0)
     dictionary = {}
     for line in history:
-        pair = line.split(":")
-        dictionary[pair[0]] = pair[1].rstrip("\n")
+        pair = line.split(':')
+        dictionary[pair[0]] = pair[1].rstrip('\n')
     reminder_ids = []
     for key in dictionary.keys():
         if key[5:10] == date_key:
             message_year = key[:4]
             age = int(year_now) - int(message_year)
             message_id = dictionary[key]
-            sent = bot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
-                                    text="В этот день {} назад".format(plural_years(age)))
+            sent = bot.send_message(
+                chat_id=chat_id,
+                reply_to_message_id=message_id,
+                text='В этот день {} назад'.format(plural_years(age)),
+            )
             reminder_ids.append(str(sent.message_id))
     if len(reminder_ids) > 0:
         return reminder_ids
@@ -106,12 +111,12 @@ def store_reminder(file, date, message_id):
     file.seek(0)
     dictionary = defaultdict(list)
     for line in file:
-        pair = line.split(":")
-        dictionary[pair[0]] = pair[1].rstrip("\n").split(",")
+        pair = line.split(':')
+        dictionary[pair[0]] = pair[1].rstrip('\n').split(',')
     dictionary[date_key].append(message_id)
     file.truncate(0)
     for key, value in sorted(dictionary.items()):
-        file.write("{}:{}\n".format(key, ','.join(value)))
+        file.write('{}:{}\n'.format(key, ','.join(value)))
 
 
 # return ids of reminders of certain age
@@ -122,12 +127,12 @@ def get_reminder_id(file, age):
     file.seek(0)
     dictionary = {}
     for line in file:
-        pair = line.split(":")
-        dictionary[pair[0]] = pair[1].rstrip("\n").split(",")
+        pair = line.split(':')
+        dictionary[pair[0]] = pair[1].rstrip('\n').split(',')
     try:
         return dictionary[date_key]
     except KeyError:
-        return False
+        return []
 
 
 # delete line from file
@@ -136,13 +141,13 @@ def delete_line(file, date):
     file.seek(0)
     dictionary = {}
     for line in file:
-        pair = line.split(":")
-        dictionary[pair[0]] = pair[1].rstrip("\n")
+        pair = line.split(':')
+        dictionary[pair[0]] = pair[1].rstrip('\n')
     if date_key in dictionary.keys():
         del dictionary[date_key]
     file.truncate(0)
     for key, value in sorted(dictionary.items()):
-        file.write("{}:{}\n".format(key, value))
+        file.write('{}:{}\n'.format(key, value))
 
 
 # removes message id from reminders file
@@ -150,31 +155,34 @@ def delete_message_id(file, message_id):
     file.seek(0)
     dictionary = {}
     for line in file:
-        pair = line.split(":")
-        dictionary[pair[0]] = pair[1].rstrip("\n").split(",")
+        pair = line.split(':')
+        dictionary[pair[0]] = pair[1].rstrip('\n').split(',')
     for value in dictionary.values():
         if message_id in value:
             value.remove(message_id)
 
 
-for chat_id in chat_ids:
-    reminders = open("data/%s_reminders.txt" % chat_id, "a+")
-    date_today = convert_date(datetime.utcnow())
-    yearly_reminder_ids = remind_yearly(chat_id, date_today)
-    if yearly_reminder_ids:
-        for id in yearly_reminder_ids:
-            store_reminder(reminders, date_today, id)
-    for age in remind_ages:
-        reminder_id = remind(chat_id, age)
-        if reminder_id:
-            store_reminder(reminders, date_today, reminder_id)
-    messages = get_reminder_id(reminders, reminder_age)
-    if messages:
+def main():
+    for chat_id in chat_ids:
+        reminders = open('data/{}_reminders.txt'.format(chat_id), 'a+')
+        date_today = convert_date(datetime.utcnow())
+        yearly_reminder_ids = remind_yearly(chat_id, date_today)
+        if yearly_reminder_ids:
+            for id in yearly_reminder_ids:
+                store_reminder(reminders, date_today, id)
+        for age in remind_ages:
+            reminder_id = remind(chat_id, age)
+            if reminder_id:
+                store_reminder(reminders, date_today, reminder_id)
+        messages = get_reminder_id(reminders, reminder_age)
         for message in messages:
             try:
                 bot.delete_message(chat_id=chat_id, message_id=message)
             except BadRequest:
                 pass
-    delete_date = convert_date(datetime.utcnow()) - timedelta(reminder_age)
-    delete_line(reminders, delete_date)
-    reminders.close()
+        delete_date = convert_date(datetime.utcnow()) - timedelta(reminder_age)
+        delete_line(reminders, delete_date)
+        reminders.close()
+
+
+main()

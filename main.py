@@ -15,7 +15,7 @@ dispatcher = updater.dispatcher
 try:
     os.mkdir('data')
 except FileExistsError:
-    print("Directory already exists")
+    print('Directory already exists')
 
 
 def save_message_id(file, date, message_id, rewrite=False):
@@ -26,18 +26,18 @@ def save_message_id(file, date, message_id, rewrite=False):
     file.seek(0)
     dictionary = dict()
     for line in file:
-        pair = line.split(":")
-        dictionary[pair[0]] = pair[1].rstrip("\n")
+        pair = line.split(':')
+        dictionary[pair[0]] = pair[1].rstrip('\n')
     if date_key in dictionary:
         if not rewrite:
             return 'Такая дата уже есть'
-        result = "Обновлено сообщение для даты {}".format(date_key)
+        result = 'Обновлено сообщение для даты {}'.format(date_key)
     else:
-        result = "Сохранено сообщение для даты {}".format(date_key)
+        result = 'Сохранено сообщение для даты {}'.format(date_key)
     dictionary[date_key] = message_id
     file.truncate(0)
     for key, value in sorted(dictionary.items()):
-        file.write("{}:{}\n".format(key, value))
+        file.write('{}:{}\n'.format(key, value))
     return result
 
 
@@ -63,15 +63,20 @@ def convert_date(date):
 def answer(update, context):
     effective_chat = update.effective_chat
     if effective_chat.type == 'group':
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="Добавь меня в групповой чат, я буду записывать и потом напоминать о том, что обсуждалось в чате некоторое время назад.")
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text='Добавь меня в групповой чат, я буду записывать и потом напоминать о том, '
+                 'что обсуждалось в чате некоторое время назад.',
+        )
         return
     if effective_chat.type != 'supergroup':
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="Добавь меня в групповой чат, я буду записывать и потом напоминать о том, что обсуждалось в чате некоторое время назад.")
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text='Добавь меня в групповой чат, я буду записывать и потом напоминать о том, '
+                 'что обсуждалось в чате некоторое время назад.')
         return
     message = update.message
-    with open("data/%s_history.txt" % message.chat_id, "a+") as history:
+    with open('data/{}_history.txt'.format(message.chat_id), 'a+') as history:
         custom_date = get_custom_date(message.text or message.caption, convert_date(message.date))
         save_message_id(history, custom_date, message.message_id)
 
@@ -82,9 +87,9 @@ def save_command(update, context):
     bot = context.bot
     reply_to_message = update.message.reply_to_message
     if not reply_to_message:
-        bot.send_message(chat_id=effective_chat.id, text="Сделай реплай на сообщение")
+        bot.send_message(chat_id=effective_chat.id, text='Сделай реплай на сообщение')
         return
-    with open("data/%s_history.txt" % update.message.chat_id, "a+") as history:
+    with open('data/{}_history.txt'.format(update.message.chat_id), 'a+') as history:
         message_id = str(reply_to_message.message_id)
         custom_date = get_custom_date(reply_to_message.text or reply_to_message.caption,
                                       convert_date(reply_to_message.date))
