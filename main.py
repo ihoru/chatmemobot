@@ -1,15 +1,15 @@
+import logging
 import os
 from datetime import datetime
+
 import pytz
-from telegram.ext import Updater, CommandHandler, Filters, MessageHandler
-import logging
+from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 
 import settings
 
 updater = Updater(token=settings.TELEGRAM_BOT_API, use_context=True)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 dispatcher = updater.dispatcher
-
 
 # create a folder to store data
 try:
@@ -40,6 +40,7 @@ def save_message_id(file, date, message_id, rewrite=False):
         file.write("{}:{}\n".format(key, value))
     return result
 
+
 # get date from message text if any
 def get_custom_date(text, default_date):
     if not text:
@@ -48,6 +49,7 @@ def get_custom_date(text, default_date):
         return datetime.strptime(text[:10], '%Y-%m-%d')
     except ValueError:
         return default_date
+
 
 # converts date without timezone to Bangkok timezone
 def convert_date(date):
@@ -59,12 +61,14 @@ def convert_date(date):
 
 # if chat type is supergroup, try to add message id to history file. Any other chat type - answer with a default text
 def answer(update, context):
-    effective_chat=update.effective_chat
+    effective_chat = update.effective_chat
     if effective_chat.type == 'group':
-        context.bot.send_message(chat_id=update.effective_chat.id, text="Добавь меня в групповой чат, я буду записывать и потом напоминать о том, что обсуждалось в чате некоторое время назад.")
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text="Добавь меня в групповой чат, я буду записывать и потом напоминать о том, что обсуждалось в чате некоторое время назад.")
         return
     if effective_chat.type != 'supergroup':
-        context.bot.send_message(chat_id=update.effective_chat.id, text="Добавь меня в групповой чат, я буду записывать и потом напоминать о том, что обсуждалось в чате некоторое время назад.")
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text="Добавь меня в групповой чат, я буду записывать и потом напоминать о том, что обсуждалось в чате некоторое время назад.")
         return
     message = update.message
     with open("data/%s_history.txt" % message.chat_id, "a+") as history:
@@ -74,15 +78,16 @@ def answer(update, context):
 
 # for command 'save': add (replace - if date already exists) message id to history file
 def save_command(update, context):
-    effective_chat=update.effective_chat
-    bot=context.bot
+    effective_chat = update.effective_chat
+    bot = context.bot
     reply_to_message = update.message.reply_to_message
     if not reply_to_message:
         bot.send_message(chat_id=effective_chat.id, text="Сделай реплай на сообщение")
         return
     with open("data/%s_history.txt" % update.message.chat_id, "a+") as history:
         message_id = str(reply_to_message.message_id)
-        custom_date = get_custom_date(reply_to_message.text or reply_to_message.caption, convert_date(reply_to_message.date))
+        custom_date = get_custom_date(reply_to_message.text or reply_to_message.caption,
+                                      convert_date(reply_to_message.date))
         result = save_message_id(history, custom_date, message_id, rewrite=True)
         bot.send_message(chat_id=effective_chat.id, text=result)
 

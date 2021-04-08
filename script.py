@@ -1,19 +1,19 @@
 ﻿from collections import defaultdict
 from datetime import datetime, timedelta
+
 import pytz
 from telegram import Bot
-from telegram.utils.request import Request
-from telegram.error import (TelegramError, Unauthorized, BadRequest, TimedOut, ChatMigrated, NetworkError)
+from telegram.error import (BadRequest)
 
 import settings
 
 bot = Bot(token=settings.TELEGRAM_BOT_API)
 
-
 # CONFIG
 remind_ages = [30, 90]
-chat_ids = ['-1001456020556']# TODO: убрать хардкод, сканировать папку на наличие файлов
-reminder_age = 7 # days, older reminders will be deleted
+chat_ids = ['-1001456020556']  # TODO: убрать хардкод, сканировать папку на наличие файлов
+reminder_age = 7  # days, older reminders will be deleted
+
 
 # converts date without timezone to Bangkok timezone
 def convert_date(date):
@@ -21,6 +21,7 @@ def convert_date(date):
     utc_date = pytz.utc.localize(naive_date)
     bangkok_date = utc_date.astimezone(pytz.timezone('Asia/Bangkok'))
     return bangkok_date
+
 
 # search message id of certain date
 def get_message_id(file, date):
@@ -35,6 +36,7 @@ def get_message_id(file, date):
     except KeyError:
         return False
 
+
 # pluralize
 def plural_years(n):
     years = ["год", "года", "лет"]
@@ -45,6 +47,7 @@ def plural_years(n):
     else:
         p = 2
     return str(n) + ' ' + years[p]
+
 
 def plural_days(n):
     days = ['день', 'дня', 'дней']
@@ -58,13 +61,15 @@ def plural_days(n):
 
     return str(n) + ' ' + days[p]
 
+
 # search message id of certain age and reply
 def remind(chat_id, age):
-    history = open("data/%s_history.txt" %chat_id, "a+")
+    history = open("data/%s_history.txt" % chat_id, "a+")
     remind_date = convert_date(datetime.utcnow()) - timedelta(age)
     message_id = get_message_id(history, remind_date)
     if message_id:
-        sent = bot.send_message(chat_id=chat_id, reply_to_message_id = message_id, text="{} назад".format(plural_days(age)))
+        sent = bot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
+                                text="{} назад".format(plural_days(age)))
         return str(sent.message_id)
     else:
         return False
@@ -72,7 +77,7 @@ def remind(chat_id, age):
 
 # checks messages year by year
 def remind_yearly(chat_id, date):
-    history = open("data/%s_history.txt" %chat_id, "a+")
+    history = open("data/%s_history.txt" % chat_id, "a+")
     date_key = date.strftime('%m-%d')
     year_now = date.strftime('%Y')
     history.seek(0)
@@ -86,12 +91,14 @@ def remind_yearly(chat_id, date):
             message_year = key[:4]
             age = int(year_now) - int(message_year)
             message_id = dictionary[key]
-            sent = bot.send_message(chat_id=chat_id, reply_to_message_id = message_id, text="В этот день {} назад".format(plural_years(age)))
+            sent = bot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
+                                    text="В этот день {} назад".format(plural_years(age)))
             reminder_ids.append(str(sent.message_id))
     if len(reminder_ids) > 0:
         return reminder_ids
     else:
         return False
+
 
 # add reminder id to Reminders file
 def store_reminder(file, date, message_id):
@@ -122,6 +129,7 @@ def get_reminder_id(file, age):
     except KeyError:
         return False
 
+
 # delete line from file
 def delete_line(file, date):
     date_key = date.strftime('%Y-%m-%d')
@@ -136,6 +144,7 @@ def delete_line(file, date):
     for key, value in sorted(dictionary.items()):
         file.write("{}:{}\n".format(key, value))
 
+
 # removes message id from reminders file
 def delete_message_id(file, message_id):
     file.seek(0)
@@ -148,9 +157,8 @@ def delete_message_id(file, message_id):
             value.remove(message_id)
 
 
-
 for chat_id in chat_ids:
-    reminders = open("data/%s_reminders.txt" %chat_id, "a+")
+    reminders = open("data/%s_reminders.txt" % chat_id, "a+")
     date_today = convert_date(datetime.utcnow())
     yearly_reminder_ids = remind_yearly(chat_id, date_today)
     if yearly_reminder_ids:
@@ -164,7 +172,7 @@ for chat_id in chat_ids:
     if messages:
         for message in messages:
             try:
-                bot.delete_message(chat_id = chat_id, message_id = message)
+                bot.delete_message(chat_id=chat_id, message_id=message)
             except BadRequest:
                 pass
     delete_date = convert_date(datetime.utcnow()) - timedelta(reminder_age)
