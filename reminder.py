@@ -106,7 +106,7 @@ def main():
         # TODO: переписать, чтобы в файл производилась запись только один раз в конце.
         # А также считывание из history происходило только раз
         filename = filename.replace('_history.', '_reminders.')
-        reminders = open(filename, 'w+')
+        reminders = open(filename, 'a+')
         chat_id = filename.split('/')[1].split('_')[0]
         today = convert_date(datetime.utcnow())
         yearly_reminder_ids = remind_yearly(chat_id, today)

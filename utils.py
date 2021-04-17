@@ -2,7 +2,7 @@ import pytz
 
 
 def file_history(chat_id):
-    return open('data/{}_history.txt'.format(chat_id), 'w+')
+    return open('data/{}_history.txt'.format(chat_id), 'a+')
 
 
 def history_dict(chat_id) -> dict:
