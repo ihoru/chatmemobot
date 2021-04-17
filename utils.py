@@ -8,7 +8,8 @@ def file_history(chat_id):
 def history_dict(chat_id) -> dict:
     dictionary = {}
     with file_history(chat_id) as history:
-        for line in history:
+        history.seek(0)
+        for line in history.readlines():
             pair = line.split(':')
             dictionary[pair[0]] = pair[1].rstrip('\n')
     return dictionary

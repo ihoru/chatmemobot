@@ -1,5 +1,5 @@
 ﻿from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from glob import glob
 
 from telegram import Bot
@@ -37,7 +37,8 @@ def remind_yearly(chat_id, date):
     reminder_ids = []
     for key, message_id in dictionary.items():
         year, month, day = key.split('-')
-        if month == date.strftime('%m') and day == date.strftime('%d'):
+        year = int(year)
+        if year != year_now and month == date.strftime('%m') and day == date.strftime('%d'):
             years = year_now - int(year)
             text = 'В этот день {} назад'.format(plural_phrase(years, 'год', 'года', 'лет'))
             try:
