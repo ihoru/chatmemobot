@@ -1,26 +1,19 @@
 import logging
 import os
+from argparse import ArgumentParser
 from datetime import datetime
 
-import pytz
 from telegram import Bot, Chat, Message, Update
 from telegram.ext import CallbackContext, CommandHandler, Dispatcher, Filters, MessageHandler, Updater
 
 import settings
+from utils import convert_date, file_history
 
-updater = Updater(token=settings.TELEGRAM_BOT_API, use_context=True)
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-dispatcher = updater.dispatcher  # type:Dispatcher
-
-# create a folder to store data
-try:
-    os.mkdir('data')
-except FileExistsError:
-    print('Directory already exists')
-
+logger=logging.getLogger(__name__)
 
 class Stop(Exception):
     pass
+
 
 def save_message_id(file, date, message_id, rewrite=False):
     """
@@ -55,11 +48,6 @@ def get_custom_date(text, default_date):
         return default_date
 
 
-# converts date without timezone to Bangkok timezone
-def convert_date(d):
-    return d.astimezone(pytz.timezone('Asia/Bangkok'))
-
-
 def check_chat(update: Update, context: CallbackContext):
     chat = update.effective_chat  # type:Chat
     bot = context.bot  # type:Bot
@@ -73,7 +61,7 @@ def check_chat(update: Update, context: CallbackContext):
 def answer(update: Update, context: CallbackContext):
     check_chat(update, context)
     message = update.message  # type:Message
-    with open('data/{}_history.txt'.format(message.chat_id), 'a+') as history:
+    with file_history(message.chat_id) as history:
         text = message.text or message.caption
         custom_date = get_custom_date(text, convert_date(message.date))
         save_message_id(history, custom_date, message.message_id)
@@ -87,7 +75,7 @@ def save_command(update: Update, context: CallbackContext):
     if not reply_to_message:
         message.reply_text('Сделай реплай на сообщение')
         return
-    with open('data/{}_history.txt'.format(update.message.chat_id), 'a+') as history:
+    with file_history(update.message.chat_id) as history:
         message_id = str(reply_to_message.message_id)
         text = reply_to_message.text or reply_to_message.caption
         custom_date = get_custom_date(text, convert_date(reply_to_message.date))
@@ -99,13 +87,30 @@ def error(update: Update, context: CallbackContext):
     if isinstance(context.error, Stop):
         # остановка
         return
-    message = update.effective_message  # type:Message
-    message.reply_text('Произошла ошибка')
+    logger.exception(context.error)
+    if update:
+        message = update.effective_message  # type:Message
+        message.reply_text('Произошла ошибка')
 
 
-dispatcher.add_handler(CommandHandler('start', answer))
-dispatcher.add_handler(CommandHandler('save', save_command))
-dispatcher.add_handler(MessageHandler(Filters.update.message & (Filters.text | Filters.caption), answer))
-dispatcher.add_error_handler(error)
+def main():
+    parser = ArgumentParser()
+    parser.add_argument('-v', '--verbose', action='store_true')
+    args = parser.parse_args()
 
-updater.start_polling(allowed_updates=['message'])
+    os.makedirs('data', exist_ok=True)
+
+    updater = Updater(token=settings.TELEGRAM_BOT_API, use_context=True)
+    level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
+    dispatcher = updater.dispatcher  # type:Dispatcher
+    dispatcher.add_handler(CommandHandler('start', answer))
+    dispatcher.add_handler(CommandHandler('save', save_command))
+    dispatcher.add_handler(MessageHandler(Filters.update.message & (Filters.text | Filters.caption), answer))
+    dispatcher.add_error_handler(error)
+    updater.start_polling(allowed_updates=['message'])
+    # TODO: try-except KeyboardInterrupt
+
+
+if __name__ == '__main__':
+    main()
