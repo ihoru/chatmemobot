@@ -102,9 +102,10 @@ def delete_message_id(file, message_id):
 
 
 def main():
-    for filename in glob('data/-*_reminders.txt'):
+    for filename in glob('data/-*_history.txt'):
         # TODO: переписать, чтобы в файл производилась запись только один раз в конце.
         # А также считывание из history происходило только раз
+        filename = filename.replace('_history.', '_reminders.')
         reminders = open(filename, 'w+')
         chat_id = filename.split('/')[1].split('_')[0]
         today = convert_date(datetime.utcnow())
