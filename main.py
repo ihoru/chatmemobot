@@ -1,51 +1,29 @@
 import logging
 import os
 from argparse import ArgumentParser
-from datetime import datetime
+from datetime import date, datetime
 
-from telegram import Bot, Chat, Message, Update
-from telegram.ext import CallbackContext, CommandHandler, Dispatcher, Filters, MessageHandler, Updater
+from telegram import *
+from telegram.ext import *
 
 import settings
-from utils import convert_date, file_history
+from utils import History, convert_date
 
-logger=logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
 
 class Stop(Exception):
     pass
 
 
-def save_message_id(file, date, message_id, rewrite=False):
-    """
-    add (replace - if date already exists) message id to history file
-    """
-    date_key = date.strftime('%Y-%m-%d')
-    file.seek(0)
-    dictionary = dict()
-    for line in file:
-        pair = line.split(':')
-        dictionary[pair[0]] = pair[1].rstrip('\n')
-    if date_key in dictionary:
-        if not rewrite:
-            return 'Такая дата уже есть'
-        result = 'Обновлено сообщение для даты {}'.format(date_key)
-    else:
-        result = 'Сохранено сообщение для даты {}'.format(date_key)
-    dictionary[date_key] = message_id
-    file.truncate(0)
-    for key, value in sorted(dictionary.items()):
-        file.write('{}:{}\n'.format(key, value))
-    return result
-
-
 # get date from message text if any
-def get_custom_date(text, default_date):
+def get_custom_date(text: str, default: date):
     if not text:
-        return default_date
+        return default
     try:
-        return datetime.strptime(text[:10], '%Y-%m-%d')
+        return datetime.strptime(text[:10], '%Y-%m-%d').date()
     except ValueError:
-        return default_date
+        return default
 
 
 def check_chat(update: Update, context: CallbackContext):
@@ -61,10 +39,15 @@ def check_chat(update: Update, context: CallbackContext):
 def answer(update: Update, context: CallbackContext):
     check_chat(update, context)
     message = update.message  # type:Message
-    with file_history(message.chat_id) as history:
-        text = message.text or message.caption
-        custom_date = get_custom_date(text, convert_date(message.date))
-        save_message_id(history, custom_date, message.message_id)
+    text = message.text or message.caption
+    custom_date = get_custom_date(text, convert_date(message.date).date())
+    history = History(message.chat_id)
+    if history.has(custom_date):
+        # дата уже есть
+        history.close()
+    else:
+        history.add(custom_date, message.message_id)
+        history.save()
 
 
 # for command 'save': add (replace - if date already exists) message id to history file
@@ -75,12 +58,18 @@ def save_command(update: Update, context: CallbackContext):
     if not reply_to_message:
         message.reply_text('Сделай реплай на сообщение')
         return
-    with file_history(update.message.chat_id) as history:
-        message_id = str(reply_to_message.message_id)
-        text = reply_to_message.text or reply_to_message.caption
-        custom_date = get_custom_date(text, convert_date(reply_to_message.date))
-        result_text = save_message_id(history, custom_date, message_id, rewrite=True)
-        message.reply_text(result_text)
+    message_id = str(reply_to_message.message_id)
+    text = reply_to_message.text or reply_to_message.caption
+    custom_date = get_custom_date(text, convert_date(reply_to_message.date).date())
+    history = History(message.chat_id)
+    history.add(custom_date, message_id)
+    history.save()
+    if history.has(custom_date):
+        reply = 'Обновлено для {}'
+    else:
+        reply = 'Сохранено для {}'
+    reply = reply.format(custom_date)
+    message.reply_text(reply)
 
 
 def error(update: Update, context: CallbackContext):
