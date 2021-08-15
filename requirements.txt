@@ -5,7 +5,7 @@ pytz==2020.1
 backcall==0.2.0
 certifi==2020.4.5.2
 cffi==1.14.0
-cryptography==2.9.2
+cryptography==3.3.2
 decorator==4.4.2
 future==0.18.2
 ipython-genutils==0.2.0
