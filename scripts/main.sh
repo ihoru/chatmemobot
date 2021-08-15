@@ -3,4 +3,4 @@
 DIR=$(dirname $0)
 cd ${DIR}/..
 source $PWD/ENV/bin/activate
-python main.py $@
+python main.py $@ >> logs/main.log 2>&1
