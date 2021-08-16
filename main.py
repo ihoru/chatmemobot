@@ -73,7 +73,7 @@ def save_command(update: Update, context: CallbackContext):
 
 
 def help_command(update: Update, context: CallbackContext):
-    update.message.reply_text(
+    context.bot.send_message(
         'Подробное <a href="{}">описание</a>, инструкция по использованию со скриншотами и disclaimer.\n\n'
         '<a href="{}">Репозиторий</a>'.format(settings.HELP_URL, settings.REPOSITORY_URL),
         parse_mode='HTML',
