@@ -27,17 +27,16 @@ def delete_message(chat_id, message_id):
         return False
 
 
-def lovely_duration(d1: date, d2: date):
-    d1 - d2
-    rel = relativedelta(dt1=d1, dt2=d2)
+def lovely_duration(old_date: date, recent_date: date):
+    rel = relativedelta(dt1=recent_date, dt2=old_date)
     text = ''
     years = rel.years
     months = rel.months
-    if years:
+    if years > 0:
         text += '{} {}'.format(years, plural_phrase(years, 'год', 'года', 'лет'))
-    if months:
+    if months > 0:
         text += ', {} {}'.format(months, plural_phrase(months, 'месяц', 'месяца', 'месяцев'))
-    text += ' назад ({})'.format(d1)
+    text += ' назад ({})'.format(old_date)
     return text.strip(' ,')
 
 

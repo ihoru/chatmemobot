@@ -103,10 +103,11 @@ def convert_date(dt: datetime):
 
 
 def plural_phrase(n, one, two, five):
+    n = abs(n)
     if n % 10 == 1 and n % 100 != 11:
         phrase = one
     elif 2 <= n % 10 <= 4 and (n % 100 < 10 or n % 100 >= 20):
         phrase = two
     else:
         phrase = five
-    return '{} {}'.format(n, phrase)
+    return phrase
