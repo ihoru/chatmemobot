@@ -72,6 +72,13 @@ def save_command(update: Update, context: CallbackContext):
     message.reply_text(reply)
 
 
+def help_command(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        '<a href="{}">Подробное описание, инструкция по использованию со скриншотами и disclamer</a>\n'
+        '<a href="{}">Репозиторий</a>'.format(settings.HELP_URL, settings.REPOSITORY_URL)
+    )
+
+
 def error(update: Update, context: CallbackContext):
     if isinstance(context.error, Stop):
         # остановка
@@ -95,6 +102,7 @@ def main():
     dispatcher = updater.dispatcher  # type:Dispatcher
     dispatcher.add_handler(CommandHandler('start', answer))
     dispatcher.add_handler(CommandHandler('save', save_command))
+    dispatcher.add_handler(CommandHandler('help', help_command))
     dispatcher.add_handler(MessageHandler(Filters.update.message & (Filters.text | Filters.caption), answer))
     dispatcher.add_error_handler(error)
     updater.start_polling(allowed_updates=['message'])

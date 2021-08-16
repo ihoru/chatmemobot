@@ -11,6 +11,8 @@ REMIND_MONTHS = [
     5 * 12,
 ]
 DELETE_REMINDER_AFTER_DAYS = 7  # напоминания старее столько дней будут удалены
+HELP_URL = 'https://telegra.ph/ChatMemoBot--bot-dnevnik-08-16'
+REPOSITORY_URL = 'https://github.com/ihoru/chatmemobot'
 
 # noinspection PyUnresolvedReferences
 from local_settings import *
