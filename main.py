@@ -73,7 +73,9 @@ def save_command(update: Update, context: CallbackContext):
 
 
 def help_command(update: Update, context: CallbackContext):
+    chat = update.effective_chat  # type:Chat
     context.bot.send_message(
+        chat.id,
         'Подробное <a href="{}">описание</a>, инструкция по использованию со скриншотами и disclaimer.\n\n'
         '<a href="{}">Репозиторий</a>'.format(settings.HELP_URL, settings.REPOSITORY_URL),
         parse_mode='HTML',
