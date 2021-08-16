@@ -38,7 +38,7 @@ class File:
         return key in self.data
 
     def get(self, key, default=None):
-        return self.data.get(key, default=default)
+        return self.data.get(key, default)
 
     def _get_data_for_saving(self):
         return sorted(self.data.items())
