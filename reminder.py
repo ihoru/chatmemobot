@@ -1,5 +1,5 @@
 ﻿from copy import copy
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from glob import glob
 
 from dateutil.relativedelta import relativedelta
@@ -7,7 +7,7 @@ from dateutil.rrule import DAILY, rrule
 from telegram import Bot
 
 import settings
-from utils import History, Reminders, convert_date
+from utils import History, Reminders, convert_date, plural_phrase
 
 bot = Bot(token=settings.TELEGRAM_BOT_API)
 
@@ -27,6 +27,20 @@ def delete_message(chat_id, message_id):
         return False
 
 
+def lovely_duration(d1: date, d2: date):
+    d1 - d2
+    rel = relativedelta(dt1=d1, dt2=d2)
+    text = ''
+    years = rel.years
+    months = rel.months
+    if years:
+        text += '{} {}'.format(years, plural_phrase(years, 'год', 'года', 'лет'))
+    if months:
+        text += ', {} {}'.format(months, plural_phrase(months, 'месяц', 'месяца', 'месяцев'))
+    text += ' назад ({})'.format(d1)
+    return text.strip(' ,')
+
+
 def main():
     today = convert_date(datetime.utcnow()).date()
     yesterday = today - timedelta(days=1)
@@ -41,9 +55,10 @@ def main():
             till_dates = today - relativedelta(months=months)
             for d in rrule(DAILY, dtstart=from_dates, until=till_dates):
                 d = d.date()
-                old_message_id = history.data.get(d)
+                old_message_id = history.get(d)
                 if old_message_id:
-                    message_id = remind(chat_id, str(d), old_message_id)
+                    text = lovely_duration(d, today)
+                    message_id = remind(chat_id, text, old_message_id)
                     if message_id:
                         reminders.add(today, message_id)
         # удаление старых напоминаний

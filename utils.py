@@ -37,6 +37,9 @@ class File:
     def has(self, key):
         return key in self.data
 
+    def get(self, key, default=None):
+        return self.data.get(key, default=default)
+
     def _get_data_for_saving(self):
         return sorted(self.data.items())
 
@@ -97,3 +100,13 @@ class Reminders(ChatIdFile):
 # convert to my timezone
 def convert_date(dt: datetime):
     return dt.astimezone(pytz.timezone(settings.TZ))
+
+
+def plural_phrase(n, one, two, five):
+    if n % 10 == 1 and n % 100 != 11:
+        phrase = one
+    elif 2 <= n % 10 <= 4 and (n % 100 < 10 or n % 100 >= 20):
+        phrase = two
+    else:
+        phrase = five
+    return '{} {}'.format(n, phrase)
